@@ -19,3 +19,16 @@ class AskResponse(BaseModel):
     confidence: float = 0.0
     latency_ms: int = 0
     trace_id: str
+
+class RetrieveRequest(BaseModel):
+    query: str
+    top_k: int = 4
+
+class RetrieveHit(BaseModel):
+    rank: int
+    score: float
+    text: str
+    metadata: dict
+
+class RetrieveResponse(BaseModel):
+    hits: List[RetrieveHit]

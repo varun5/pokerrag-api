@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.deps import get_settings
-from app.routers import health, ask
+from app.routers import health, ask, retrieve 
 
 settings = get_settings()
 app = FastAPI(title=settings.api_title, version=settings.api_version, docs_url=settings.api_docs)
@@ -16,6 +16,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(ask.router)
+app.include_router(retrieve.router)             # add this line
 
 @app.get("/")
 async def root():
