@@ -1,3 +1,69 @@
+# === RETRIEVER LOADER START ===
+try:
+    import faiss  # optional
+except Exception:
+    faiss = None
+
+import json, numpy as np
+from pathlib import Path
+
+_DATA_DIR = Path(__file__).resolve().parents[1] / "data" / "build"
+_EMB_PATHS = [
+    _DATA_DIR / "embeddings.fp16.npy",
+    _DATA_DIR / "embeddings.npy",
+]
+_META_PATH = _DATA_DIR / "metadata.json"
+
+_EMB = None
+_META = None
+
+def _lazy_load():
+    global _EMB, _META
+    if _EMB is None:
+        for pth in _EMB_PATHS:
+            if pth.exists():
+                _EMB = np.load(pth, mmap_mode="r")
+                break
+        if _EMB is None:
+            raise RuntimeError("No embeddings file found")
+    if _META is None:
+        with open(_META_PATH, "r") as f:
+            _META = json.load(f)
+    return _EMB, _META
+
+def _cosine_topk(query_vec: np.ndarray, top_k: int = 5):
+    E, _ = _lazy_load()
+    q = query_vec.astype(np.float32, copy=False)
+    q /= (np.linalg.norm(q) + 1e-9)
+
+    n, d = E.shape
+    step = 8192
+    best_scores = np.full(top_k, -1e9, dtype=np.float32)
+    best_idx = np.full(top_k, -1, dtype=np.int32)
+
+    for s in range(0, n, step):
+        e = min(s + step, n)
+        block = np.asarray(E[s:e], dtype=np.float32)
+        norms = np.linalg.norm(block, axis=1, keepdims=True) + 1e-9
+        block /= norms
+        scores = block @ q
+        part_idx = np.argpartition(scores, -top_k)[-top_k:]
+        part_scores = scores[part_idx]
+        all_scores = np.concatenate([best_scores, part_scores])
+        all_idx = np.concatenate([best_idx, s + part_idx])
+        keep = np.argpartition(all_scores, -top_k)[-top_k:]
+        best_scores, best_idx = all_scores[keep], all_idx[keep]
+
+    ord_ = np.argsort(-best_scores)
+    return best_idx[ord_], best_scores[ord_]
+
+def get_embeddings_and_meta():
+    return _lazy_load()
+
+def cosine_topk(query_vec: np.ndarray, k: int = 5):
+    return _cosine_topk(query_vec, k)
+# === RETRIEVER LOADER END ===
+
 import json, pathlib, re
 import numpy as np
 import faiss
