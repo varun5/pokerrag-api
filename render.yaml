@@ -1,0 +1,21 @@
+# render.yaml
+services:
+  - type: web
+    name: pokerrag-api
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: render
+      - key: LOG_LEVEL
+        value: INFO
+      - key: API_TITLE
+        value: PokerRag
+      - key: API_VERSION
+        value: "0.2.0"
+      - key: API_DOCS
+        value: /docs
