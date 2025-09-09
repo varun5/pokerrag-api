@@ -1,3 +1,4 @@
+import os
 # === RETRIEVER LOADER START ===
 try:
     import faiss  # optional
@@ -33,11 +34,12 @@ def _lazy_load():
 
 def _cosine_topk(query_vec: np.ndarray, top_k: int = 5):
     E, _ = _lazy_load()
+    step = int(os.getenv('POKERRAG_STEP', '2048'))
     q = query_vec.astype(np.float32, copy=False)
     q /= (np.linalg.norm(q) + 1e-9)
 
     n, d = E.shape
-    step = 8192
+    step = int(os.getenv('POKERRAG_STEP', '2048'))
     best_scores = np.full(top_k, -1e9, dtype=np.float32)
     best_idx = np.full(top_k, -1, dtype=np.int32)
 
@@ -82,7 +84,7 @@ class Retriever:
         meta_path = BUILD / "metadata.json"
         if not emb_path.exists() or not meta_path.exists():
             raise FileNotFoundError("Missing embeddings.npy or metadata.json in data/build/")
-        self.emb = np.load(emb_path).astype("float32")
+        self.emb = np.load(emb_path, mmap_mode='r').astype("float32")
         faiss.normalize_L2(self.emb)                      # ensure normalized
         self.index = faiss.IndexFlatIP(self.emb.shape[1]) # cosine via dot
         self.index.add(self.emb)
