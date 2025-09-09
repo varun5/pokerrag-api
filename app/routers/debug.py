@@ -9,6 +9,13 @@ except Exception:
     _HAS_RETRIEVAL = False
     get_embeddings_and_meta = None  # type: ignore
 
+try:
+    from app.llm import LLMClient
+    _HAS_LLM = True
+except Exception:
+    _HAS_LLM = False
+    LLMClient = None  # type: ignore
+
 router = APIRouter(tags=["debug"])
 
 def _rss_mb() -> float:
@@ -44,4 +51,30 @@ async def debug_mem() -> Dict:
             })
         except Exception as e:
             info["embeddings"]["error"] = str(e)
+    return info
+
+@router.get("/debug/llm")
+async def debug_llm() -> Dict:
+    info = {
+        "llm_available": _HAS_LLM,
+        "env_vars": {
+            "OPENAI_API_KEY": "SET" if os.getenv("OPENAI_API_KEY") else "NOT_SET",
+            "GROQ_API_KEY": "SET" if os.getenv("GROQ_API_KEY") else "NOT_SET",
+        },
+        "llm_config": None,
+        "error": None
+    }
+    
+    if _HAS_LLM and LLMClient:
+        try:
+            llm_client = LLMClient()
+            info["llm_config"] = {
+                "openai_active": llm_client.openai_active,
+                "groq_active": llm_client.groq_active,
+                "tinyllama_active": llm_client.tinyllama_active,
+                "fallback_active": llm_client.fallback_active,
+            }
+        except Exception as e:
+            info["error"] = str(e)
+    
     return info
