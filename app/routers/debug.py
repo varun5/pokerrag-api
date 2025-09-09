@@ -69,10 +69,10 @@ async def debug_llm() -> Dict:
         try:
             llm_client = LLMClient()
             info["llm_config"] = {
-                "openai_active": llm_client.openai_active,
-                "groq_active": llm_client.groq_active,
-                "tinyllama_active": llm_client.tinyllama_active,
-                "fallback_active": llm_client.fallback_active,
+                "use_openai": llm_client.use_openai,
+                "use_groq": llm_client.use_groq,
+                "use_tinyllama": llm_client.use_tinyllama,
+                "fallback_active": not (llm_client.use_openai or llm_client.use_groq or llm_client.use_tinyllama),
             }
         except Exception as e:
             info["error"] = str(e)
